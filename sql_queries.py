@@ -65,11 +65,11 @@ staging_songs_table_create = """
 songplay_table_create = """
 CREATE TABLE IF NOT EXISTS songplay(
     songplay_id IDENTITY(0,1) NOT NULL,
-    start_time bigint NOT NULL,
+    start_time bigint NOT NULL sortkey,
     user_id int NOT NULL,
     level text,
     song_id text,
-    artist_id text,
+    artist_id text distkey,
     session_id int,
     location text,
     user_agent text,
@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS songplay(
 
 user_table_create = """
 CREATE TABLE IF NOT EXISTS user (
-    user_id int NOT NULL,
+    user_id int NOT NULL sortkey,
     first_name text,
     last_name text,
     gender text,
@@ -97,7 +97,7 @@ CREATE TABLE IF NOT EXISTS user (
 
 song_table_create = """
 CREATE TABLE IF NOT EXISTS song (
-    song_id text NOT NULL,
+    song_id text NOT NULL sortkey,
     title text,
     artist_id text,
     year int,
@@ -109,7 +109,7 @@ CREATE TABLE IF NOT EXISTS song (
 
 artist_table_create = """
 CREATE TABLE IF NOT EXISTS artist (
-    artist_id text NOT NULL,
+    artist_id text NOT NULL distkey,
     name text,
     location text,
     latitude text,
@@ -121,7 +121,7 @@ CREATE TABLE IF NOT EXISTS artist (
 
 time_table_create = """
 CREATE TABLE IF NOT EXISTS time (
-    start_time bigint NOT NULL,
+    start_time bigint NOT NULL sortkey,
     hour int,
     day int,
     week int,
@@ -151,6 +151,18 @@ staging_songs_copy = f"""
 # FINAL TABLES
 
 songplay_table_insert = """
+    INSERT INTO songplay (start_time, user_id, level, song_id, artist_id, session_id, location, user_agent)
+    SELECT  DISTINCT(e.ts)  as start_time, 
+            e.userId        as user_id, 
+            e.level         as level, 
+            s.song_id       as song_id, 
+            s.artist_id     as artist_id, 
+            e.sessionId     as session_id, 
+            e.location      as location, 
+            e.userAgent     as user_agent
+    FROM staging_events e
+    JOIN staging_songs  s   ON (e.song = s.title AND e.artist = s.artist_name)
+    AND e.page  ==  'NextSong'
 
 """
 
