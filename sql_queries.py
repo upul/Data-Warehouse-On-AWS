@@ -43,7 +43,7 @@ staging_events_table_create = """
         status              INTEGER,
         ts                  TIMESTAMP,
         userAgent           VARCHAR,
-        userId              INTEGER 
+        userId              INTEGER
     )
 """
 
@@ -53,10 +53,10 @@ staging_songs_table_create = """
         artist_id           VARCHAR,
         artist_latitude     FLOAT,
         artist_longitude    FLOAT,
-        artist_location     VARCHAR,
-        artist_name         VARCHAR,
+        artist_location     VARCHAR(2000),
+        artist_name         VARCHAR(2000),
         song_id             VARCHAR,
-        title               VARCHAR,
+        title               VARCHAR(2000),
         duration            FLOAT,
         year                INTEGER
     )
@@ -101,7 +101,7 @@ CREATE TABLE IF NOT EXISTS artists (
 
 time_table_create = """
 CREATE TABLE IF NOT EXISTS time (
-    start_time bigint NOT NULL sortkey,
+    start_time TIMESTAMP NOT NULL sortkey,
     hour int,
     day int,
     week int,
@@ -116,7 +116,7 @@ CREATE TABLE IF NOT EXISTS time (
 songplay_table_create = """
 CREATE TABLE IF NOT EXISTS songplays(
     songplay_id int IDENTITY(0,1) NOT NULL,
-    start_time bigint NOT NULL sortkey,
+    start_time TIMESTAMP NOT NULL sortkey,
     user_id int NOT NULL,
     level text,
     song_id text,
@@ -166,7 +166,7 @@ songplay_table_insert = """
             e.userAgent     as user_agent
     FROM staging_events e
     JOIN staging_songs  s   ON (e.song = s.title AND e.artist = s.artist_name)
-    AND e.page  ==  'NextSong'
+    AND e.page  =  'NextSong'
 
 """
 
@@ -179,7 +179,7 @@ INSERT INTO users (user_id, first_name, last_name, gender, level)
             level
     FROM staging_events
     WHERE user_id IS NOT NULL
-    AND page  ==  'NextSong';
+    AND page  =  'NextSong';
 """
 
 song_table_insert = """
