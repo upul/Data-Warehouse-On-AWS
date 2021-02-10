@@ -6,20 +6,20 @@ config = configparser.ConfigParser()
 config.read("dwh.cfg")
 
 # Reading some useful constants
-AMI_ROLE = config("IAM_ROLE", "ARN")
-LOG_DATA = config("S3", "LOG_DATA")
-LOG_DATA_FORMAT = config("S3", "LOG_JSONPATH")
-SONG_DATA = config("S3", "SONG_DATA")
+AMI_ROLE = config.get("IAM_ROLE", "ARN")
+LOG_DATA = config.get("S3", "LOG_DATA")
+LOG_DATA_FORMAT = config.get("S3", "LOG_JSONPATH")
+SONG_DATA = config.get("S3", "SONG_DATA")
 
 # DROP TABLES
 
-staging_events_table_drop = "staging_events"
-staging_songs_table_drop = "staging_songs"
-songplay_table_drop = "songplay"
-user_table_drop = "user"
-song_table_drop = "song"
-artist_table_drop = "artist"
-time_table_drop = "time"
+staging_events_table_drop = "DROP TABLE IF EXISTS staging_events;"
+staging_songs_table_drop = "DROP TABLE IF EXISTS staging_songs;"
+songplay_table_drop = "DROP TABLE IF EXISTS songplays;"
+user_table_drop = "DROP TABLE IF EXISTS users;"
+song_table_drop = "DROP TABLE IF EXISTS songs;"
+artist_table_drop = "DROP TABLE IF EXISTS artists;"
+time_table_drop = "DROP TABLE IF EXISTS time;"
 
 # CREATE TABLES
 
@@ -62,29 +62,9 @@ staging_songs_table_create = """
     )
 """
 
-songplay_table_create = """
-CREATE TABLE IF NOT EXISTS songplay(
-    songplay_id IDENTITY(0,1) NOT NULL,
-    start_time bigint NOT NULL sortkey,
-    user_id int NOT NULL,
-    level text,
-    song_id text,
-    artist_id text distkey,
-    session_id int,
-    location text,
-    user_agent text,
-    
-    PRIMARY KEY(songplay_id),
-    FOREIGN KEY(user_id) REFERENCES user(user_id),
-    FOREIGN KEY(song_id) REFERENCES song(song_id),
-    FOREIGN KEY(artist_id) REFERENCES artist(artist_id),
-    FOREIGN KEY(start_time) REFERENCES time(start_time)
-    
-);
-"""
 
 user_table_create = """
-CREATE TABLE IF NOT EXISTS user (
+CREATE TABLE IF NOT EXISTS users (
     user_id int NOT NULL sortkey,
     first_name text,
     last_name text,
@@ -96,7 +76,7 @@ CREATE TABLE IF NOT EXISTS user (
 """
 
 song_table_create = """
-CREATE TABLE IF NOT EXISTS song (
+CREATE TABLE IF NOT EXISTS songs (
     song_id text NOT NULL sortkey,
     title text,
     artist_id text,
@@ -108,7 +88,7 @@ CREATE TABLE IF NOT EXISTS song (
 """
 
 artist_table_create = """
-CREATE TABLE IF NOT EXISTS artist (
+CREATE TABLE IF NOT EXISTS artists (
     artist_id text NOT NULL distkey,
     name text,
     location text,
@@ -133,6 +113,27 @@ CREATE TABLE IF NOT EXISTS time (
 )
 """
 
+songplay_table_create = """
+CREATE TABLE IF NOT EXISTS songplays(
+    songplay_id int IDENTITY(0,1) NOT NULL,
+    start_time bigint NOT NULL sortkey,
+    user_id int NOT NULL,
+    level text,
+    song_id text,
+    artist_id text distkey,
+    session_id int,
+    location text,
+    user_agent text,
+    
+    PRIMARY KEY(songplay_id),
+    FOREIGN KEY(user_id) REFERENCES users(user_id),
+    FOREIGN KEY(song_id) REFERENCES songs(song_id),
+    FOREIGN KEY(artist_id) REFERENCES artists(artist_id),
+    FOREIGN KEY(start_time) REFERENCES time(start_time)
+    
+);
+"""
+
 # STAGING TABLES
 
 staging_events_copy = f"""
@@ -144,14 +145,17 @@ staging_events_copy = f"""
 
 staging_songs_copy = f"""
     copy staging_songs from {SONG_DATA}
-    credentials 'aws_iam_role={AMI_ROLE}'  
-    region 'us-west-2' format as JSON 'auto'
+    credentials 'aws_iam_role={AMI_ROLE}'
+    format as json 'auto'
+    ACCEPTINVCHARS AS '^'
+    STATUPDATE ON
+    region 'us-west-2';
 """
 
 # FINAL TABLES
 
 songplay_table_insert = """
-    INSERT INTO songplay (start_time, user_id, level, song_id, artist_id, session_id, location, user_agent)
+    INSERT INTO songplays (start_time, user_id, level, song_id, artist_id, session_id, location, user_agent)
     SELECT  DISTINCT(e.ts)  as start_time, 
             e.userId        as user_id, 
             e.level         as level, 
@@ -179,7 +183,7 @@ INSERT INTO users (user_id, first_name, last_name, gender, level)
 """
 
 song_table_insert = """
-INSERT INTO song (song_id, title, artist_id, year, duration)
+INSERT INTO songs (song_id, title, artist_id, year, duration)
 SELECT DISTINCT(song_id) as song_title,
        title,
        artist_id,
@@ -190,7 +194,7 @@ WHERE song_id IS NOT NULL;
 """
 
 artist_table_insert = """
-INSERT INTO artist (artist_id, name, location, latitude, longitude)
+INSERT INTO artists (artist_id, name, location, latitude, longitude)
 SELECT DISTINCT(artist_id) as artist_id, 
        artist_name as name,
        artist_location as location,
@@ -210,7 +214,7 @@ SELECT DISTINCT(start_time) as start_time,
        EXTRACT(month FROM start_time) as month,
        EXTRACT(year FROM start_time) as year,
        EXTRACT(dayofweek FROM start_time) as weekday
-FROM  songplay
+FROM  songplays
 """
 
 # QUERY LISTS
@@ -218,11 +222,11 @@ FROM  songplay
 create_table_queries = [
     staging_events_table_create,
     staging_songs_table_create,
-    songplay_table_create,
     user_table_create,
     song_table_create,
     artist_table_create,
     time_table_create,
+    songplay_table_create,
 ]
 drop_table_queries = [
     staging_events_table_drop,
@@ -234,6 +238,7 @@ drop_table_queries = [
     time_table_drop,
 ]
 copy_table_queries = [staging_events_copy, staging_songs_copy]
+
 insert_table_queries = [
     songplay_table_insert,
     user_table_insert,
