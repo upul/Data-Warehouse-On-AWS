@@ -1,6 +1,6 @@
 # Building a Data Warehouse on AWS
 
-The scope of the project is to create a Warehouse for a music application. The source data are stored in a bunch of JSON files in AWS S3 buckets. We process them and extract useful information about users, songs, artists, users' listing information. Next, push extracted data to fact and dimensional tables for further analysis.
+The scope of the project is to create a **Data Warehouse** for a music application. The source data are stored in a bunch of JSON files in AWS S3 buckets. We process them and extract useful information about users, songs, artists, users' listing information. Next, push extracted data to fact and dimensional tables for further analysis.
 
 
 ## How to Deploy and Run
